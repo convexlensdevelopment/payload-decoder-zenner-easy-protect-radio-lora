@@ -56,7 +56,7 @@ function Decoder(bytes, port) {
                 obj.packet_subtype = 0;
                 obj.packet_type_info = "synchronous";
                 //obj.status_interpretation = null;
-                obj.status_dedcoded = false;
+                obj.status_decoded = false;
                 obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                 //obj.decodingTree = [casePosition];
                 switch(bytes[1]) {
