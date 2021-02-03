@@ -1,4 +1,6 @@
-
+/**
+ * https://raw.githubusercontent.com/studierendenwerk-ulm/payload-decoder-zenner-easy-protect-radio-lora/master/decoder.js
+ */
 
 /**
  * Main decoder function
@@ -9,20 +11,21 @@
 function Decoder(bytes, port) {
     if(bytes === null || bytes === 0){
         //obj.port = port;
-        obj.status_dedcoded = false;
+        obj.status_decoded = false;
         obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
     } else {
         // Definition of head line daily value.
-        /* let S_SMOKE_CHAMBER_POLLUTION_PREWARNING = 0x0800;
-         let S_SMOKE_CHAMBER_POLLUTION_WARNING = 0x1000;
-         let S_TEST_BUTTON_FAILUER = 0x2000;
-         let S_ACCUSTIC_ALARM_FAILUER = 0x4000;
-         let S_REMOVAL_DETECTION = 0x8000;
-         let S_TEST_ALARM = 0x0001;
-         let S_SMOKE_ALARM = 0x0002;
-         let S_OBSTRUCTION_DETECTION = 0x0004;
-         let S_SURROUNDING_AREA_MONITORING = 0x0008;
-         let S_LED_FAILURE = 0x0010;*/
+         var S_BATTERY_EOL = 0x0200;
+         var S_SMOKE_CHAMBER_POLLUTION_PREWARNING = 0x0800;
+         var S_SMOKE_CHAMBER_POLLUTION_WARNING = 0x1000;
+         var S_TEST_BUTTON_FAILURE = 0x2000;
+         var S_ACCUSTIC_ALARM_FAILURE = 0x4000;
+         var S_REMOVAL_DETECTION = 0x8000;
+         var S_TEST_ALARM = 0x0001;
+         var S_SMOKE_ALARM = 0x0002;
+         var S_OBSTRUCTION_DETECTION = 0x0004;
+         var S_SURROUNDING_AREA_MONITORING = 0x0008;
+         var S_LED_FAILURE = 0x0010;
 
         // Definition of the different packet types and subtypes.
         var TYPE_SP1 = 0x1; //sent daily -> packet, max. 2 retransmissions
@@ -31,7 +34,7 @@ function Decoder(bytes, port) {
         var SUBTYPE_SP9_2 = 0x02; // sent immediately after first activation and from then on every 6 months -> No retransmissions
         var TYPE_AP1 = 0xA; //  (status code, status data): event based -> Max 5 AP packets per month, no retransmissions
 
-        // Device specific status summery definition
+        // Device specific status summary definition
         var A_REMOVAL = 0x02;
         var A_BATTERY_END_OF_LIFE = 0x0C;
         var A_HORN_DRIVE_LEVEL_FAILURE = 0x16;
@@ -39,7 +42,7 @@ function Decoder(bytes, port) {
         var A_OBJECT_IN_THE_SURROUNDING_AREA = 0x1C;
         var AP_VALUES = ["removal", "battery end of life",
             "horn drive level failure", "obstruction detection", "object in the surrounding area"];
-        var S_STATUS_SUMMERY_VALUES = ["removal", "0",
+        var S_STATUS_SUMMARY_VALUES = ["removal", "0",
             "battery end of life", "acoustic alarm failure",
             "obstruction detection", "surrounding area monitoring"];
 
@@ -56,19 +59,54 @@ function Decoder(bytes, port) {
                 obj.status_dedcoded = false;
                 obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                 //obj.decodingTree = [casePosition];
+                switch(bytes[1]) {
+                    case S_BATTERY_EOL:
+                        obj.sp1_decode = "S_BATTERY_EOL";
+                        break;
+                    case S_SMOKE_CHAMBER_POLLUTION_PREWARNING:
+                        obj.sp1_decode = "S_SMOKE_CHAMBER_POLLUTION_PREWARNING";
+                        break;
+                    case S_SMOKE_CHAMBER_POLLUTION_WARNING:
+                        obj.sp1_decode = "S_SMOKE_CHAMBER_POLLUTION_WARNING";
+                        break;
+                    case S_TEST_BUTTON_FAILURE:
+                        obj.sp1_decode = "S_TEST_BUTTON_FAILURE";
+                        break;
+                    case S_ACCUSTIC_ALARM_FAILURE:
+                        obj.sp1_decode = "S_ACCUSTIC_ALARM_FAILURE";
+                        break;
+                    case S_REMOVAL_DETECTION:
+                        obj.sp1_decode = "S_REMOVAL_DETECTION";
+                        break;
+                    case S_TEST_ALARM:
+                        obj.sp1_decode = "S_TEST_ALARM";
+                        break;
+                    case S_SMOKE_ALARM:
+                        obj.sp1_decode = "S_SMOKE_ALARM";
+                        break;
+                    case S_OBSTRUCTION_DETECTION:
+                        obj.sp1_decode = "S_OBSTRUCTION_DETECTION";
+                        break;
+                    case S_SURROUNDING_AREA_MONITORING:
+                        obj.sp1_decode = "S_SURROUNDING_AREA_MONITORING";
+                        break;
+                    case S_LED_FAILURE:
+                        obj.sp1_decode = "S_LED_FAILURE";
+                        break;
+                }
                 break;
             case TYPE_SP9:
                 obj.packet_type = 9;
                 obj.packet_type_info = "synchronous";
-                obj.status_dedcoded = false;
+                obj.status_decoded = false;
                 // check for packet subtype SP9.1 and SP9.2
                 switch (bytes[0] & 0x0F) {
                     case SUBTYPE_SP9_1:
                         obj.packet_subtype = 1;
                         obj.dateTime = decodeDateAndTime(((bytes[1] << 24) | (bytes[2] << 16) | (bytes[3] << 8) | (bytes[4])));
                         //TODO make a function to check is the device in correct dateAndTime
-                        obj.status_interpretation = buildStatusSummery(bytes[5], bytes[6], S_STATUS_SUMMERY_VALUES);
-                        obj.status_dedcoded = true;
+                        obj.status_interpretation = buildStatusSummary(bytes[5], bytes[6], S_STATUS_SUMMARY_VALUES);
+                        obj.status_decoded = true;
                         obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                         break;
                     case SUBTYPE_SP9_2:
@@ -84,11 +122,11 @@ function Decoder(bytes, port) {
                             "meter ID: " + (((bytes[11] << 24) + (bytes[12] << 16) + (bytes[13] << 8) + (bytes[14]))
                                 .toString(16)).toUpperCase()
                         ];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                         break;
                     default:
-                        obj.status_dedcoded = false;
+                        obj.status_decoded = false;
                         obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                         break;
                 }
@@ -99,30 +137,30 @@ function Decoder(bytes, port) {
                 obj.packet_type_info = "asynchronous";
                 obj.date = (decodeDate(bytes [3] << 8 | bytes[4]));
                 obj.status_interpretation = null;
-                obj.status_dedcoded = false;
+                obj.status_decoded = false;
                 obj.status_info = null;
                 obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
 
                 switch (bytes[1]) {
                     case A_REMOVAL:
                         obj.status_interpretation = AP_VALUES[0];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         break;
                     case A_BATTERY_END_OF_LIFE:
                         obj.status_interpretation = AP_VALUES[1];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         break;
                     case A_HORN_DRIVE_LEVEL_FAILURE:
                         obj.status_interpretation = AP_VALUES[2];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         break;
                     case A_OBSTRUCTION_DETECTION:
                         obj.status_interpretation = AP_VALUES[3];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         break;
                     case A_OBJECT_IN_THE_SURROUNDING_AREA:
                         obj.status_interpretation = AP_VALUES[4];
-                        obj.status_dedcoded = true;
+                        obj.status_decoded = true;
                         break;
                     default:
                         obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
@@ -130,7 +168,7 @@ function Decoder(bytes, port) {
                 }
                 break;
             default:
-                obj.status_dedcoded = false;
+                obj.status_decoded = false;
                 obj.status_info = "payload_raw: " + payloadRawHexToString(bytes);
                 break;
         }
@@ -199,10 +237,10 @@ function payloadRawHexToString(byteArray) {
  * Build the summary for package 9.1.
  * @param a
  * @param b
- * @param S_STATUS_SUMMERY_VALUES
+ * @param S_STATUS_SUMMARY_VALUES
  * @returns {[]}
  */
-function buildStatusSummery(a, b,S_STATUS_SUMMERY_VALUES) {
+function buildStatusSummary(a, b,S_STATUS_SUMMARY_VALUES) {
 
     var bin1 = parseInt(a.toString(), 16).toString(2);
     var bin2 = parseInt(b.toString(), 16).toString(2);
@@ -211,13 +249,13 @@ function buildStatusSummery(a, b,S_STATUS_SUMMERY_VALUES) {
     for (var i = 0; i < bin1.length; i++) {
         console.log(bin1.length);
         if (bin1[i] === "1") {
-            result.push(S_STATUS_SUMMERY_VALUES[i]);
+            result.push(S_STATUS_SUMMARY_VALUES[i]);
         }
     }
 
     for (var j = 0; j < bin2.length; j++) {
         if (bin2[i] === "1") {
-            result.push(S_STATUS_SUMMERY_VALUES[j]);
+            result.push(S_STATUS_SUMMARY_VALUES[j]);
         }
     }
 
